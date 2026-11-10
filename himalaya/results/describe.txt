@@ -1,0 +1,267 @@
+
+
+========== MEMBERS : 76519 rows x 21 columns ==========
+
+-- expedition_id  [character]  missing 0.0%  unique 10350
+   top: EVER88101 (99), HIML13308 (90), EVER15106 (79), EVER08101 (76), MANA16304 (71), EVER18185 (69), EVER73101 (68), EVER13181 (65) 
+
+-- member_id  [character]  missing 0.0%  unique 76518
+   top: KANG10101-01 (2), ACHN15301-01 (1), ACHN15301-02 (1), ACHN15301-03 (1), ACHN15301-04 (1), ACHN15301-05 (1), ACHN15302-01 (1), ACHN15302-02 (1) 
+
+-- peak_id  [character]  missing 0.0%  unique 391
+   top: EVER (21813), CHOY (8890), AMAD (8406), MANA (4593), DHA1 (2592), MAKA (2405), LHOT (2379), BARU (2190) 
+
+-- peak_name  [character]  missing 0.0%  unique 391
+   top: Everest (21813), Cho Oyu (8890), Ama Dablam (8406), Manaslu (4593), Dhaulagiri I (2592), Makalu (2405), Lhotse (2379), Baruntse (2190) 
+
+-- year  [numeric]  missing 0.0%  unique 92
+   min/1%/25%/median/75%/99%/max: 1905 / 1954 / 1991 / 2004 / 2012 / 2019 / 2019   mean 2000.36 
+
+-- season  [character]  missing 0.0%  unique 5
+   top: Spring (37782), Autumn (35895), Winter (2101), Summer (740), Unknown (1) 
+   success % by level: Autumn=36.1% (n=35895); Spring=41.1% (n=37782); Summer=26.6% (n=740); Unknown=100% (n=1); Winter=23.8% (n=2101) 
+
+-- sex  [character]  missing 0.0%  unique 3
+   top: M (69473), F (7044) 
+   success % by level: F=32.7% (n=7044); M=38.7% (n=69473); NA=100% (n=2) 
+
+-- age  [numeric]  missing 4.6%  unique 75
+   min/1%/25%/median/75%/99%/max: 7 / 20 / 29 / 36 / 44 / 65 / 85   mean 37.33 
+
+-- citizenship  [character]  missing 0.0%  unique 213
+   top: Nepal (16135), USA (6448), Japan (6432), UK (5219), France (4611), Spain (3326), S Korea (2913), Italy (2764) 
+
+-- expedition_role  [character]  missing 0.0%  unique 525
+   top: Climber (44667), H-A Worker (14489), Leader (10036), Exp Doctor (1450), Deputy Leader (1238), Sirdar (579), H-A Assistant (391), BC Manager (385) 
+
+-- hired  [logical]  missing 0.0%  unique 2
+   TRUE: 15731 (20.6%) 
+   success % by level: FALSE=31.4% (n=60788); TRUE=64.1% (n=15731) 
+
+-- highpoint_metres  [numeric]  missing 28.5%  unique 886
+   min/1%/25%/median/75%/99%/max: 3800 / 5300 / 6700 / 7400 / 8400 / 8850 / 8850   mean 7470.68 
+
+-- success  [logical]  missing 0.0%  unique 2
+   TRUE: 29199 (38.2%) 
+
+-- solo  [logical]  missing 0.0%  unique 2
+   TRUE: 121 (0.2%) 
+   success % by level: FALSE=38.1% (n=76398); TRUE=63.6% (n=121) 
+
+-- oxygen_used  [logical]  missing 0.0%  unique 2
+   TRUE: 18233 (23.8%) 
+   success % by level: FALSE=25.9% (n=58286); TRUE=77.5% (n=18233) 
+
+-- died  [logical]  missing 0.0%  unique 2
+   TRUE: 1106 (1.4%) 
+   success % by level: FALSE=38.4% (n=75413); TRUE=21.5% (n=1106) 
+
+-- death_cause  [character]  missing 98.6%  unique 13
+   top: Avalanche (369), Fall (331), AMS (102), Illness (non-AMS) (60), Disappearance (unexplained) (49), Exposure / frostbite (42), Exhaustion (41), Other (33) 
+
+-- death_height_metres  [numeric]  missing 98.6%  unique 141
+   min/1%/25%/median/75%/99%/max: 400 / 3467 / 5800 / 6600 / 7550 / 8760 / 8830   mean 6592.85 
+
+-- injured  [logical]  missing 0.0%  unique 2
+   TRUE: 1713 (2.2%) 
+   success % by level: FALSE=38.5% (n=74806); TRUE=23.4% (n=1713) 
+
+-- injury_type  [character]  missing 97.8%  unique 12
+   top: Exposure / frostbite (599), AMS (415), Illness (non-AMS) (257), Fall (117), Avalanche (114), Falling rock / ice (88), Other (75), Crevasse (25) 
+   success % by level: AMS=8.2% (n=415); Avalanche=0.9% (n=114); Crevasse=16% (n=25); Disappearance (unexplained)=0% (n=8); Exhaustion=42.9% (n=7); Exposure / frostbite=53.1% (n=599); Fall=19.7% (n=117); Falling rock / ice=4.5% (n=88); Icefall collapse=0% (n=7); Illness (non-AMS)=3.9% (n=257); Other=4% (n=75); NA=38.5% (n=74807) 
+
+-- injury_height_metres  [numeric]  missing 98.7%  unique 131
+   min/1%/25%/median/75%/99%/max: 400 / 4212 / 6200 / 7100 / 8000 / 8800 / 8880   mean 7049.91 
+
+
+========== EXPEDITIONS : 10364 rows x 16 columns ==========
+
+-- expedition_id  [character]  missing 0.0%  unique 10363
+   top: KANG10101 (2), ACHN15301 (1), ACHN15302 (1), ACHN18301 (1), AMAD00101 (1), AMAD00102 (1), AMAD00103 (1), AMAD00104 (1) 
+
+-- peak_id  [character]  missing 0.0%  unique 391
+   top: EVER (2149), AMAD (1366), CHOY (1332), MANA (632), LHOT (429), DHA1 (383), MAKA (356), BARU (308) 
+
+-- peak_name  [character]  missing 0.0%  unique 391
+   top: Everest (2149), Ama Dablam (1366), Cho Oyu (1332), Manaslu (632), Lhotse (429), Dhaulagiri I (383), Makalu (356), Baruntse (308) 
+
+-- year  [numeric]  missing 0.0%  unique 92
+   min/1%/25%/median/75%/99%/max: 1905 / 1953 / 1994 / 2005 / 2012 / 2019 / 2019   mean 2001.16 
+
+-- season  [character]  missing 0.0%  unique 5
+   top: Autumn (5064), Spring (4875), Winter (315), Summer (108), Unknown (2) 
+
+-- basecamp_date  [Date]  missing 10.6%  unique 4181
+   range: 1921-06-26 2019-05-27 
+
+-- highpoint_date  [Date]  missing 6.3%  unique 3920
+   range: 1905-09-01 2019-05-30 
+
+-- termination_date  [Date]  missing 23.0%  unique 3267
+   range: 1921-09-30 2019-06-04 
+
+-- termination_reason  [character]  missing 0.0%  unique 15
+   top: Success (main peak) (5581), Bad weather (storms, high winds) (1307), Bad conditions (deep snow, avalanching, falling ice, or rock) (1097), Illness, AMS, exhaustion, or frostbite (458), Route technically too difficult, lack of experience, strength, or motivation (438), Other (320), Accident (death or serious injury) (299), Did not attempt climb (233) 
+
+-- highpoint_metres  [numeric]  missing 4.0%  unique 695
+   min/1%/25%/median/75%/99%/max: 3500 / 5200 / 6700 / 7300 / 8188 / 8850 / 8850   mean 7408.92 
+
+-- members  [numeric]  missing 0.0%  unique 53
+   min/1%/25%/median/75%/99%/max: 0 / 1 / 2 / 5 / 8 / 25 / 99   mean 5.95 
+
+-- member_deaths  [numeric]  missing 0.0%  unique 8
+   min/1%/25%/median/75%/99%/max: 0 / 0 / 0 / 0 / 0 / 2 / 10   mean 0.08 
+
+-- hired_staff  [numeric]  missing 0.0%  unique 54
+   min/1%/25%/median/75%/99%/max: 0 / 0 / 0 / 1 / 3 / 23 / 99   mean 2.78 
+
+-- hired_staff_deaths  [numeric]  missing 0.0%  unique 10
+   min/1%/25%/median/75%/99%/max: 0 / 0 / 0 / 0 / 0 / 1 / 11   mean 0.03 
+
+-- oxygen_used  [logical]  missing 0.0%  unique 2
+   TRUE: 2912 (28.1%) 
+
+-- trekking_agency  [character]  missing 15.2%  unique 829
+   top: Asian Trekking (853), Thamserku Trekking (707), Himalayan Guides (374), Seven Summit Treks (313), Cosmo Treks (293), Monterosa Treks (243), Cho Oyu Trekking (199), Arun Treks (148) 
+
+
+========== PEAKS : 468 rows x 8 columns ==========
+
+-- peak_id  [character]  missing 0.0%  unique 468
+   top: ACHN (1), AGLE (1), AMAD (1), AMOT (1), AMPG (1), AMPH (1), AMPM (1), ANID (1) 
+
+-- peak_name  [character]  missing 0.0%  unique 468
+   top: Agole East (1), Aichyn (1), Ama Dablam (1), Amotsang (1), Amphu Gyabjen (1), Amphu I (1), Amphu Middle (1), Anidesh Chuli (1) 
+
+-- peak_alternative_name  [character]  missing 47.6%  unique 243
+   top: Junction Peak (2), Tent Peak (2), Twins (2), "False" Mera Peak (1), "True" Mera Peak (1), Agole, Angole (1), Amai Dablang (1), Amatson (1) 
+
+-- height_metres  [numeric]  missing 0.0%  unique 407
+   min/1%/25%/median/75%/99%/max: 5407 / 5673.6 / 6235.8 / 6559.5 / 6911 / 8479 / 8850   mean 6656.64 
+
+-- climbing_status  [character]  missing 0.0%  unique 2
+   top: Climbed (341), Unclimbed (127) 
+
+-- first_ascent_year  [numeric]  missing 28.2%  unique 71
+   min/1%/25%/median/75%/99%/max: 201 / 1930 / 1963 / 1982 / 2008 / 2018.6 / 2019   mean 1979.08 
+
+-- first_ascent_country  [character]  missing 28.2%  unique 78
+   top: Japan, Nepal (61), Japan (43), UK (23), UK, Nepal (18), USA (17), France (16), W Germany (10), France, Nepal (8) 
+
+-- first_ascent_expedition_id  [character]  missing 28.8%  unique 333
+   top: SPH462101 (2), ACHN15301 (1), AMAD61101 (1), AMPG53101 (1), AMPH13301 (1), AMPM08101 (1), ANN150101 (1), ANN260101 (1) 
+
+
+========== CHECKS ==========
+Duplicate member rows (expedition_id + member_id): 1 
+Members whose expedition is missing from expeditions.csv: 0 
+Members whose peak is missing from peaks.csv: 15 
+Expeditions per peak, top 10:
+
+     Everest      Cho Oyu   Ama Dablam      Manaslu Dhaulagiri I       Makalu 
+       21813         8890         8406         4593         2592         2405 
+      Lhotse     Baruntse       Pumori  Annapurna I 
+        2379         2190         1780         1669 
+
+Success but highpoint below peak height - 100 m: 68 
+Age < 10 or > 85: 1 
+
+Success by decade (%):
+# A tibble: 12 × 4
+   decade     n success oxygen
+    <dbl> <int>   <dbl>  <dbl>
+ 1   1900    13     7.7    0  
+ 2   1910     3    33.3    0  
+ 3   1920    70     0      8.6
+ 4   1930   266    10.2    1.9
+ 5   1940    68    26.5    0  
+ 6   1950   953    19.9   12.1
+ 7   1960  1161    29.3    8.5
+ 8   1970  3709    21.3    8.3
+ 9   1980 10371    21.5    6.7
+10   1990 13746    30.1   13.3
+11   2000 21327    43.6   27.3
+12   2010 24832    49.1   37.7
+
+Success by age band (%):
+# A tibble: 7 × 3
+  age_band     n success
+  <fct>    <int>   <dbl>
+1 (0,20]    1007    52.8
+2 (20,30]  20564    41.7
+3 (30,40]  26463    40.1
+4 (40,50]  16233    36.8
+5 (50,60]   6755    29.3
+6 (60,100]  2000    21  
+7 <NA>      3497    31.8
+
+Success by hired x oxygen (%):
+# A tibble: 4 × 4
+  hired oxygen_used     n success
+  <lgl> <lgl>       <int>   <dbl>
+1 FALSE FALSE       49868    22.6
+2 FALSE TRUE        10920    71.8
+3 TRUE  FALSE        8418    45.1
+4 TRUE  TRUE         7313    86.1
+
+Success by peak height band (%):
+# A tibble: 6 × 4
+  h                   n success oxygen
+  <fct>           <int>   <dbl>  <dbl>
+1 (5e+03,6.5e+03]  3851    41.9    0.7
+2 (6.5e+03,7e+03] 11976    46.2    0.4
+3 (7e+03,7.5e+03] 10605    27.9    0.8
+4 (7.5e+03,8e+03]  3645    16.3    2.8
+5 (8e+03,9e+03]   46427    39.8   38.7
+6 <NA>               15    93.3    0  
+
+Success by expedition_role, top 12 (%):
+# A tibble: 12 × 3
+# Groups:   expedition_role [12]
+   expedition_role success     n
+   <chr>           <lgl>   <int>
+ 1 Climber         TRUE    44667
+ 2 H-A Worker      TRUE    14489
+ 3 Leader          TRUE    10036
+ 4 Exp Doctor      TRUE     1450
+ 5 Deputy Leader   TRUE     1238
+ 6 Sirdar          TRUE      579
+ 7 H-A Assistant   TRUE      391
+ 8 BC Manager      TRUE      385
+ 9 Climbing Leader TRUE      356
+10 Member          TRUE      333
+11 Co-Leader       TRUE      331
+12 Film Team       TRUE      143
+
+Termination reasons (expeditions):
+
+                                                         Success (main peak) 
+                                                                        5581 
+                                            Bad weather (storms, high winds) 
+                                                                        1307 
+               Bad conditions (deep snow, avalanching, falling ice, or rock) 
+                                                                        1097 
+                                      Illness, AMS, exhaustion, or frostbite 
+                                                                         458 
+Route technically too difficult, lack of experience, strength, or motivation 
+                                                                         438 
+                                                                       Other 
+                                                                         320 
+                                          Accident (death or serious injury) 
+                                                                         299 
+                                                       Did not attempt climb 
+                                                                         233 
+                                     Lack (or loss) of supplies or equipment 
+                                                                         220 
+                                                           Success (subpeak) 
+                                                                         126 
+                                                                     Unknown 
+                                                                          96 
+                                                                Lack of time 
+                                                                          93 
+                                                     Did not reach base camp 
+                                                                          64 
+                                                           Success (claimed) 
+                                                                          20 
+                                                            Attempt rumoured 
+                                                                          12 

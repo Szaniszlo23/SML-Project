@@ -1,0 +1,346 @@
+% Himalayan expeditions -- SML project presentation (15 min + backup)
+% Compile from this folder:  latexmk -pdf presentation.tex
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme[progressbar=frametitle,numbering=fraction]{metropolis}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{appendixnumberbeamer}
+\graphicspath{{../figures/}}
+
+\definecolor{himblue}{HTML}{3B6EA8}
+\definecolor{himorange}{HTML}{C2410C}
+\setbeamercolor{frametitle}{bg=himblue}
+\setbeamercolor{progress bar}{fg=himorange}
+\setbeamercolor{alerted text}{fg=himorange}
+\newcommand{\key}[1]{\vfill\begin{center}\colorbox{himblue!10}{\parbox{0.92\textwidth}{\centering\small #1}}\end{center}}
+
+\title{What are your odds of reaching a Himalayan summit?}
+\subtitle{Predicting climber success with the Himalayan Database}
+\author{Name 1 \and Name 2}
+\institute{Statistical and Machine Learning \textendash{} WU Vienna}
+\date{17 November 2026}
+
+\begin{document}
+
+\maketitle
+
+% ---------------------------------------------------------------- 1 (1:00)
+\begin{frame}{The question}
+\begin{columns}[T]
+\column{0.55\textwidth}
+\begin{itemize}
+  \item Himalayan expeditions are expensive, long and dangerous
+  \item Only \alert{1 in 3} climbers reaches the summit
+  \item A climber choosing peak, season and team, or an agency planning a trip, wants to know the odds \alert{before} leaving
+\end{itemize}
+\vspace{1em}
+\textbf{Task:} binary classification \\
+\quad $P(\text{summit} \mid \text{what is known before the climb})$
+\column{0.42\textwidth}
+\textbf{We compare four methods}
+\begin{enumerate}
+  \item Elastic-net logistic regression
+  \item Pruned classification tree
+  \item Random forest
+  \item Gradient boosting
+\end{enumerate}
+\small from easy to interpret \(\rightarrow\) most flexible
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 2 (1:00)
+\begin{frame}{Data: The Himalayan Database}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\begin{itemize}
+  \item Records of all expeditions in the Nepal Himalaya (Elizabeth Hawley's archive), via TidyTuesday
+  \item Three tables: \textbf{members}, \textbf{expeditions}, \textbf{peaks}, joined to one row per climber
+\end{itemize}
+\column{0.47\textwidth}
+\textbf{Population}
+\begin{itemize}
+  \item Climbers and leaders who actually attempted the climb, 1950\textendash 2019
+  \item \alert{Hired Sherpa staff excluded}: they summit 66\% of the time as part of their job
+\end{itemize}
+\end{columns}
+\vspace{1em}
+\begin{center}
+\begin{tabular}{rrrr}
+\toprule
+Climbers & Expeditions & Peaks & Summit rate \\
+\midrule
+55,049 & 9,883 & 300+ & 33.8\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- 3 (1:30)
+\begin{frame}{Exploration: what goes with success?}
+\begin{center}
+\includegraphics[height=0.8\textheight]{eda_overview.png}
+\end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- 4 (1:30)
+\begin{frame}{Pre-processing: only use what is known before the climb}
+\begin{columns}[T]
+\column{0.45\textwidth}
+\textbf{Features (16)}
+\begin{itemize}\small
+  \item \textit{Climber:} age, sex, citizenship (top 15), leader
+  \item \textit{Mountain:} peak (top 10), height, 8000\,m peak, climbed before
+  \item \textit{Expedition:} year, season, team size, hired staff, staff per climber, commercial
+\end{itemize}
+\textbf{Removed (leakage)} \\
+\small highest point reached, death, injury, \alert{oxygen use}, reason the expedition ended
+\column{0.53\textwidth}
+\includegraphics[width=\textwidth]{rep_oxygen_leakage.png}
+\small Oxygen is recorded only if it was used, i.e.\ once a climber is already high up.
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 5 (1:00)
+\begin{frame}{Set-up: split by expedition, judge the probabilities}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Splitting}
+\begin{itemize}
+  \item Climbers of one expedition share weather, route and team \(\rightarrow\) never split them
+  \item \textbf{Test set:} 20\% of expeditions (11,133 climbers), used \alert{once} at the end
+  \item \textbf{Tuning:} 5-fold CV grouped by expedition
+\end{itemize}
+\column{0.47\textwidth}
+\textbf{Metrics}
+\begin{itemize}
+  \item \textbf{Log loss} (main) and Brier score: quality of the probabilities
+  \item \textbf{AUC}: ranking of climbers
+  \item \textbf{Calibration}: do 40\% predictions come true 40\% of the time?
+  \item Accuracy is weak: always saying ``no summit'' already gets \alert{68\%}
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 6 (1:15)
+\begin{frame}{Tuning the interpretable models}
+\begin{center}
+\includegraphics[width=\textwidth]{mod_tuning_simple.png}
+\end{center}
+\small
+\textbf{Elastic net:} spline terms for age, year, height; $\alpha$ and $\lambda$ by CV, 1-SE rule \(\rightarrow\) $\alpha = 0.25$, 38 of 49 terms kept. All $\alpha$ tie, only ridge is slightly worse. \\
+\textbf{Tree:} cost-complexity pruning, 1-SE rule \(\rightarrow\) 30 leaves.
+\end{frame}
+
+% ---------------------------------------------------------------- 7 (1:30)
+\begin{frame}{Tuning the flexible models: the out-of-bag trap}
+\begin{center}
+\includegraphics[width=0.85\textwidth]{mod_tuning_flexible.png}
+\end{center}
+\vspace{-1em}
+\small
+\textbf{Random forest:} out-of-bag error leaves out single \emph{climbers}, so teammates stay in the bag \(\rightarrow\) too optimistic (0.47 vs 0.58). Tuned on held-out expeditions: \alert{mtry 4, node size 100}. \\
+\textbf{Boosting:} depth $\times$ shrinkage $\times$ trees on a held-out fold: \alert{depth 6, $\nu = 0.02$, 2,250 trees}.
+\end{frame}
+
+% ---------------------------------------------------------------- 8 (1:15)
+\begin{frame}{Results on the test set}
+\begin{columns}[c]
+\column{0.55\textwidth}
+\begin{tabular}{lccc}
+\toprule
+Model & Log loss & AUC & Acc. \\
+\midrule
+Always ``no''  & 0.629 & 0.500 & 0.678 \\
+Elastic net    & 0.583 & 0.695 & 0.698 \\
+Pruned tree    & 0.579 & 0.685 & 0.716 \\
+Random forest  & 0.541 & 0.751 & 0.740 \\
+\textbf{Boosting} & \textbf{0.534} & \textbf{0.756} & 0.739 \\
+\bottomrule
+\end{tabular}
+\vspace{1em}
+\begin{itemize}
+  \item Flexible models clearly beat the linear model
+  \item Boosting best, forest close
+  \item All models well calibrated
+\end{itemize}
+\column{0.4\textwidth}
+\centering\includegraphics[height=0.8\textheight]{mod_calibration.png}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 9 (1:00)
+\begin{frame}{The tree as a rule book}
+\begin{center}
+\includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{mod_tree.png}
+\end{center}
+\small Top 3 splits of the 30-leaf tree (box: success rate, share of climbers). First split is \textbf{time} (before 2002: 27\%, after: 41\%), then \textbf{hired staff per climber}: modern teams with $\geq 0.58$ staff per climber reach 52\%, and 64\% since 2016.
+\end{frame}
+
+% ---------------------------------------------------------------- 10 (1:30)
+\begin{frame}{What drives success? (boosting model)}
+\begin{columns}[c]
+\column{0.66\textwidth}
+\includegraphics[width=\textwidth]{ins_partial_dependence.png}
+\column{0.32\textwidth}
+\small
+\begin{itemize}
+  \item \textbf{Year:} 20\% in the 1960s \(\rightarrow\) 48\% today; dip in 2014\textendash15 (Everest avalanche, earthquake: 0\% on Everest in 2015)
+  \item \textbf{Age:} steady decline after 40
+  \item \textbf{Sherpa support:} 25\% without \(\rightarrow\) $\sim$40\% with 1+ staff per climber
+  \item \textbf{Winter} is hardest; Cho Oyu and Ama Dablam the ``easiest'' peaks
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 11 (1:30)
+\begin{frame}{How far can we trust it?}
+\begin{columns}[T]
+\column{0.48\textwidth}
+\textbf{Leakage check}
+\includegraphics[width=\textwidth]{ins_leakage.png}
+\small Adding the climber's oxygen use lifts AUC to 0.82, a \alert{warning sign}, not a better model.
+\column{0.5\textwidth}
+\textbf{Time split}
+\includegraphics[width=\textwidth]{ins_time_split.png}
+\small Trained up to 2014: predicts 33\%, reality 47\%. Trees \alert{cannot extrapolate} the upward trend.
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 12 (1:00)
+\begin{frame}{Conclusion}
+\textbf{Predicted odds from the boosting model} \small (US climber, 2018)
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+45-year-old woman, commercial Everest expedition, spring & \textbf{67\%} \\
+30-year-old man, small team on Ama Dablam, autumn & \textbf{55\%} \\
+55-year-old man, Everest, no hired staff & \textbf{21\%} \\
+35-year-old man, Dhaulagiri I, winter & \textbf{21\%} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{columns}[T]
+\column{0.55\textwidth}
+\textbf{Take-aways}
+\begin{enumerate}\small
+  \item Boosting is best (AUC 0.76); the gain over the linear model is clear but moderate
+  \item Odds depend on \emph{when}, \emph{where}, \emph{how much support} and age
+  \item Grouping by expedition and removing leakage changed the conclusions
+\end{enumerate}
+\column{0.42\textwidth}
+\textbf{Limitations}
+\begin{itemize}\small
+  \item No climber experience in the data
+  \item Strong trend over time (see time split)
+  \item Weather and luck are not observed
+\end{itemize}
+\end{columns}
+\end{frame}
+
+\begin{frame}[standout]
+Thank you! \\[1em] Questions?
+\end{frame}
+
+% ================================================================ BACKUP
+\appendix
+\begin{frame}[standout]
+Backup
+\end{frame}
+
+\begin{frame}{Backup: full test results}
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+Model & Log loss & Brier & AUC & Accuracy \\
+\midrule
+Always ``no summit''              & 0.629 & 0.219 & 0.500 & 0.678 \\
+Elastic net                       & 0.583 & 0.198 & 0.695 & 0.698 \\
+Pruned tree                       & 0.579 & 0.196 & 0.685 & 0.716 \\
+Random forest                     & 0.541 & 0.181 & 0.751 & 0.740 \\
+Boosting                          & 0.534 & 0.178 & 0.756 & 0.739 \\
+\midrule
+\textit{Leaky: boosting + expedition oxygen} & 0.527 & 0.176 & 0.764 & 0.739 \\
+\textit{Leaky: boosting + both oxygen variables} & 0.470 & 0.154 & 0.821 & 0.780 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\small Test set: 11,133 climbers from 1,977 expeditions. Training: 43,916 climbers.
+\end{frame}
+
+\begin{frame}{Backup: tuning grids}
+\small
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Random forest} (300 trees, held-out fold)
+\begin{tabular}{ccc}
+\toprule
+mtry & node size & held-out / OOB log loss \\
+\midrule
+\textbf{4} & \textbf{100} & \textbf{0.576} / 0.506 \\
+4 & 25  & 0.576 / 0.473 \\
+7 & 100 & 0.576 / 0.498 \\
+7 & 25  & 0.582 / \alert{0.466} \\
+2 & 1000 & 0.595 / 0.577 \\
+\bottomrule
+\end{tabular} \\
+OOB would pick mtry 7 / node 25, which is worse on held-out expeditions.
+\column{0.47\textwidth}
+\textbf{Boosting} (best number of trees per setting)
+\begin{tabular}{cccc}
+\toprule
+depth & $\nu$ & trees & val.\ log loss \\
+\midrule
+\textbf{6} & \textbf{0.02} & \textbf{2250} & \textbf{0.568} \\
+4 & 0.02 & 2750 & 0.569 \\
+4 & 0.1 & 850 & 0.569 \\
+6 & 0.1 & 300 & 0.570 \\
+2 & 0.02 & 3000 & 0.575 \\
+2 & 0.1 & 1050 & 0.575 \\
+\bottomrule
+\end{tabular} \\
+\textbf{Elastic net:} $\alpha \in \{0, .25, .5, .75, 1\}$; CV deviance 1.193 for all $\alpha > 0$, 1.195 for ridge.
+\end{columns}
+\end{frame}
+
+\begin{frame}{Backup: variable importance (random forest)}
+\begin{columns}[c]
+\column{0.55\textwidth}
+\includegraphics[width=\textwidth]{ins_importance.png}
+\column{0.42\textwidth}
+\small
+\begin{itemize}
+  \item Permutation and Gini agree on the top: year, peak height, staff per climber, peak
+  \item Gini \alert{overrates continuous variables}, e.g.\ age (0.42 vs 0.18), because they offer many split points
+  \item Sex, solo and leader role barely matter
+\end{itemize}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Backup: why split by expedition?}
+\begin{columns}[c]
+\column{0.55\textwidth}
+\includegraphics[width=\textwidth]{rep_clustering.png}
+\column{0.42\textwidth}
+\small
+\begin{itemize}
+  \item Expeditions mostly succeed or fail \alert{together} (peaks at 0\% and 100\%)
+  \item A random split by climber would put teammates in training and test \(\rightarrow\) over-optimistic test error
+  \item Same reason why out-of-bag error fails (slide 7)
+\end{itemize}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Backup: raw data distributions}
+\begin{center}
+\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{rep_distributions.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Backup: success by category (all members, raw data)}
+\begin{center}
+\includegraphics[width=\textwidth]{rep_categorical.png}
+\end{center}
+\small Hired staff and climbers using oxygen succeed far more often, which is why we exclude hired staff and the oxygen variables.
+\end{frame}
+
+\end{document}
