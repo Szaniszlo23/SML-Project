@@ -1,0 +1,165 @@
+Raw tables: members 76519 | expeditions 10364 | peaks 468 
+
+=== Population ===
+                            rows
+all member records         76519
+1950 or later              76099
+not hired staff            60533
+climbing role              56443
+expedition attempted climb 55062
+peak, sex and season known 55049
+Summit rate of hired staff: 64.8 %
+
+Modelling data: 55049 climbers | 9883 expeditions | 381 peaks | summit rate 33.8 %
+
+Expeditions with 2+ climbers: 8374 | nobody summits: 43 % | everybody summits: 12 %
+
+=== Split ===
+train: 43916 climbers, 7906 expeditions | test: 11133 climbers, 1977 expeditions
+
+=== Elastic net ===
+  alpha cv_deviance
+1  0.00    1.195016
+2  0.25    1.193276
+3  0.50    1.193311
+4  0.75    1.193291
+5  1.00    1.193276
+chosen alpha 0.25 | lambda (1-SE rule) 0.0174 | non-zero coefficients 38 of 49 
+
+=== Tree ===
+1-SE cp 0.0018 | leaves 30 (minimum CV error at 64 leaves)
+
+=== Random forest ===
+ mtry node_size cv_logloss oob_logloss
+    7       100  0.5674717   0.4994349
+    4       100  0.5684257   0.5081286
+    4        25  0.5688292   0.4748642
+   11       100  0.5692785   0.4969171
+    7        25  0.5719889   0.4673572
+    7       400  0.5720851   0.5398341
+   11       400  0.5722434   0.5379845
+    4       400  0.5744001   0.5458225
+    2        25  0.5747597   0.5221143
+   11        25  0.5755711   0.4673310
+    2       100  0.5769642   0.5411660
+   11      1000  0.5785898   0.5603006
+    7      1000  0.5789337   0.5615138
+    4      1000  0.5819347   0.5666079
+    2       400  0.5835240   0.5641016
+    2      1000  0.5895641   0.5783273
+
+=== Boosting (best number of trees per setting) ===
+ depth shrinkage trees cv_logloss
+     6      0.02  2850  0.5620859
+     4      0.02  2950  0.5635977
+     6      0.10   350  0.5645980
+     4      0.10  1000  0.5665041
+     2      0.10  1100  0.5718808
+     2      0.02  3000  0.5719729
+
+=== Test set ===
+              log_loss  brier    auc accuracy
+baseline        0.6290 0.2186 0.5000   0.6783
+elastic_net     0.5824 0.1982 0.6952   0.6972
+tree            0.5787 0.1958 0.6847   0.7161
+random_forest   0.5425 0.1812 0.7477   0.7364
+boosting        0.5330 0.1781 0.7567   0.7383
+
+95% bootstrap intervals:
+         model log_loss ll_lo ll_hi   auc auc_lo auc_hi
+      baseline    0.629 0.617 0.641 0.500  0.500  0.500
+   elastic_net    0.582 0.570 0.596 0.695  0.675  0.715
+          tree    0.579 0.562 0.594 0.685  0.663  0.707
+ random_forest    0.543 0.527 0.560 0.748  0.728  0.768
+      boosting    0.533 0.517 0.550 0.757  0.738  0.775
+
+Log-loss advantage of boosting over each model (95% interval):
+  vs baseline       0.0960  [0.0824, 0.1096]
+  vs elastic_net    0.0494  [0.0388, 0.0599]
+  vs tree           0.0457  [0.0350, 0.0557]
+  vs random_forest  0.0095  [0.0033, 0.0158]
+
+Boosting, test climbers sorted into tenths by predicted probability:
+ decile predicted observed    n
+      1     0.080    0.057 1114
+      2     0.130    0.145 1114
+      3     0.176    0.154 1114
+      4     0.223    0.189 1113
+      5     0.273    0.245 1113
+      6     0.330    0.324 1113
+      7     0.393    0.374 1113
+      8     0.470    0.422 1113
+      9     0.569    0.576 1113
+     10     0.716    0.731 1113
+
+=== Permutation importance of the boosting model (increase in test log loss) ===
+                            block increase
+       Where: peak and its height   0.1127
+                       When: year   0.0649
+ Who: age, sex, citizenship, role   0.0413
+ Support: hired staff, commercial   0.0354
+                     When: season   0.0230
+                        Team size   0.0063
+         variable increase
+             year 0.064863
+             peak 0.049881
+      peak_height 0.040160
+      staff_ratio 0.026110
+           season 0.023042
+      citizenship 0.020750
+              age 0.020627
+             role 0.005586
+        team_size 0.005532
+      hired_staff 0.001949
+              sex 0.001456
+             solo 0.000714
+       commercial 0.000683
+   climbed_before 0.000290
+      age_missing 0.000181
+ eight_thousander 0.000137
+null device 
+          1 
+
+=== Random forest importance (scaled to max = 1) ===
+         variable permutation  gini
+             year      1.0000 1.000
+      peak_height      0.8742 0.622
+      staff_ratio      0.5610 0.552
+             peak      0.4922 0.272
+        team_size      0.3823 0.439
+      hired_staff      0.3776 0.293
+           season      0.3128 0.147
+      citizenship      0.2110 0.317
+              age      0.1747 0.429
+       commercial      0.1155 0.049
+ eight_thousander      0.1113 0.031
+   climbed_before      0.0269 0.028
+             role      0.0245 0.059
+      age_missing      0.0094 0.018
+              sex      0.0045 0.029
+             solo      0.0025 0.012
+
+=== One climber, different plans ===
+                                                        label predicted
+ Everest in spring, commercial team of 10 with 10 hired staff      0.74
+                               ... the same climber at age 60      0.35
+                              ... the same expedition in 1995      0.34
+                            ... without hired staff or agency      0.22
+                                 Cho Oyu in autumn, same team      0.68
+           Ama Dablam in autumn, team of 6 with 3 hired staff      0.44
+          Annapurna I in spring, team of 6 with 3 hired staff      0.30
+         Dhaulagiri I in winter, team of 6 with 3 hired staff      0.10
+
+=== Leakage check (boosting, test set) ===
+                         log_loss  brier    auc accuracy
+Pre-climb variables only   0.5330 0.1781 0.7567   0.7383
++ expedition used oxygen   0.5264 0.1760 0.7648   0.7378
++ climber used oxygen      0.4695 0.1543 0.8222   0.7790
+
+=== Time split: trained on 1950-2014 ( 47791 climbers), tested on 2015-2019 ( 7258 climbers, observed summit rate 0.468 ) ===
+              log_loss  brier    auc accuracy mean_predicted
+baseline        0.7398 0.2714 0.5000   0.5322         0.3178
+elastic_net     0.7032 0.2543 0.6270   0.5420         0.3391
+tree            0.6678 0.2372 0.6480   0.6168         0.4164
+random_forest   0.6920 0.2493 0.6375   0.5645         0.3437
+boosting        0.7132 0.2556 0.6610   0.5730         0.3185
