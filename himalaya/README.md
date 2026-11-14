@@ -13,11 +13,16 @@ the leakage check.
 
 ## Files
 
-* `analysis.R`: the whole analysis in one script (data, exploration, four tuned models, assessment, insights,
-  robustness checks). Run from this folder with `Rscript analysis.R` (about 15 minutes on 8 cores).
-* `figures/fig01` … `fig16`: figures written by the script, in the order of the story
+* `analysis.R`: data, exploration, four tuned models, assessment, insights and robustness checks. Run from this
+  folder with `Rscript analysis.R` (about 15 minutes on 8 cores). Saves the fitted objects to `results/models.rds`
+  (not in git) and then runs `figures.R`.
+* `figures.R`: draws all figures from `results/models.rds` in a few seconds, without refitting. Run
+  `Rscript figures.R` after changing a plot.
+* `extra_checks.R`: checks for the backup slides (random vs grouped CV, unpenalised logistic regression), about
+  3 minutes; writes `results/extra_checks.txt`
+* `figures/fig*.png`: figures written by `figures.R`
 * `results/results.txt`: everything the script prints; `results/*.csv`: test metrics and tuning grids
-* `slides/presentation.tex` / `.pdf`: the talk (Beamer; build with `cd slides && latexmk -pdf presentation.tex`)
+* `slides/presentation.tex` / `.pdf`: the talk (Beamer; build with `cd slides && latexmk presentation.tex`, pdfLaTeX via `latexmkrc`)
 * `data/`: the three TidyTuesday tables (downloaded automatically if missing)
 * `Himalaya_data_report.pdf`: earlier report describing every variable (first-pass numbers, superseded by the slides)
 

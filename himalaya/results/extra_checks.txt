@@ -1,0 +1,14 @@
+=== Random vs grouped 5-fold CV (tuned settings) vs the test set (new expeditions) ===
+         model  scheme cv_logloss cv_auc test_logloss test_auc
+      boosting grouped     0.5621 0.7354       0.5330   0.7567
+      boosting  random     0.5187 0.7890       0.5330   0.7567
+ random_forest grouped     0.5675 0.7270       0.5425   0.7477
+ random_forest  random     0.5080 0.8072       0.5425   0.7477
+Baseline log loss: grouped CV 0.6425, test 0.6290 (summit rate train 0.342, test 0.322)
+Boosting log loss relative to the baseline: grouped CV 0.125, test 0.153
+
+=== Unpenalised logistic regression vs elastic net (test set) ===
+                            model terms test_logloss test_auc
+ logistic regression (no penalty)    49       0.5747   0.7006
+         elastic net (lambda min)    48       0.5750   0.7005
+        elastic net (lambda 1-SE)    38       0.5824   0.6952

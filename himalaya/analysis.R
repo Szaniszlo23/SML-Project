@@ -7,7 +7,9 @@
 # Methods       : elastic-net logistic regression, pruned tree, random forest, gradient boosting
 #
 # Run from the himalaya/ folder:  Rscript analysis.R      (about 15 minutes on 8 cores)
-# Output: figures/fig*.png (used by slides/presentation.tex) and results/*.txt, *.csv
+# Output: results/*.txt, *.csv and results/models.rds (fitted objects). At the end it runs
+# figures.R, which draws figures/fig*.png from models.rds. To change only the figures, run
+# Rscript figures.R (a few seconds, nothing is refitted).
 #
 #   1. Load the data              5. Fit and tune the four models
 #   2. Population and features    6. Assessment on the test set
@@ -16,23 +18,13 @@
 # =====================================================================================
 
 suppressPackageStartupMessages({
-  library(readr); library(dplyr); library(tidyr); library(ggplot2); library(patchwork)
-  library(glmnet); library(rpart); library(rpart.plot); library(ranger); library(gbm); library(parallel)
+  library(readr); library(dplyr); library(glmnet); library(rpart); library(ranger); library(gbm); library(parallel)
 })
 set.seed(2026)
 dir.create("figures", showWarnings = FALSE); dir.create("results", showWarnings = FALSE)
 cores <- if (.Platform$OS.type == "windows") 1 else max(1, detectCores() - 1)
 sink("results/results.txt", split = TRUE)          # everything printed below is also saved
 
-# --- plot style and small helpers -----------------------------------------------------
-blue <- "#2a78d6"; orange <- "#eb6834"; aqua <- "#1baf7a"; grey <- "#8a8a85"
-theme_set(theme_minimal(base_size = 12) +
-            theme(panel.grid.minor = element_blank(), plot.title = element_text(face = "bold", size = 12),
-                  plot.title.position = "plot", plot.subtitle = element_text(colour = "grey35"),
-                  strip.text = element_text(face = "bold", hjust = 0)))
-pct      <- function(x) scales::percent(x, accuracy = 1)
-save_fig <- function(name, plot, w, h) ggsave(file.path("figures", name), plot, width = w, height = h, dpi = 200, bg = "white")
-rate     <- function(df, g) df |> group_by({{ g }}) |> summarise(n = n(), success = mean(success == "yes"), .groups = "drop")
 
 # metrics: log loss and Brier score judge the probabilities, AUC the ranking
 logloss <- function(p, y) { p <- pmin(pmax(p, 1e-6), 1 - 1e-6); -mean(y * log(p) + (1 - y) * log(1 - p)) }
@@ -103,59 +95,12 @@ cat("\nModelling data:", nrow(d), "climbers |", n_distinct(d$expedition_id), "ex
 # =====================================================================================
 # 3. Exploratory analysis
 # =====================================================================================
-# 3a. success over time (top) and number of climbers (bottom)
-by_year <- rate(d, year)
-e1 <- ggplot(filter(by_year, n >= 50), aes(year, success)) +
-  geom_hline(yintercept = base_rate, linetype = 2, colour = grey) +
-  geom_line(colour = blue, linewidth = 0.8) + geom_point(colour = blue, size = 1.2) +
-  annotate("text", x = 2013.5, y = 0.10, hjust = 1, size = 3.3, colour = "grey25",
-           label = "2014 Everest avalanche,\n2015 earthquake") +
-  annotate("text", x = 1967, y = base_rate + 0.035, size = 3.3, colour = "grey35", label = "overall 34%") +
-  scale_y_continuous(labels = pct, limits = c(0, 0.7)) + scale_x_continuous(limits = c(1949, 2020)) +
-  labs(title = "Share of climbers who reach the summit, by year", x = NULL, y = NULL)
-e2 <- ggplot(by_year, aes(year, n)) + geom_col(fill = grey, width = 0.8) + scale_x_continuous(limits = c(1949, 2020)) +
-  labs(title = "Climbers per year", x = NULL, y = NULL)
-save_fig("fig01_trend.png", e1 / e2 + plot_layout(heights = c(3, 1)), 8, 4.6)
-
-# 3b. success by where, when, who and how much support
-bar <- function(df, title, flip = FALSE) {
-  p <- ggplot(df, aes(g, success)) + geom_hline(yintercept = base_rate, linetype = 2, colour = grey) +
-    geom_col(fill = blue, width = 0.7) +
-    geom_text(aes(label = pct(success)), size = 3, hjust = if (flip) -0.15 else 0.5, vjust = if (flip) 0.5 else -0.5) +
-    scale_y_continuous(labels = pct, limits = c(0, 0.6)) + labs(title = title, x = NULL, y = NULL)
-  if (flip) p + coord_flip() + theme(panel.grid.major.y = element_blank()) else p + theme(panel.grid.major.x = element_blank())
-}
-top10 <- names(sort(table(d$peak_name), decreasing = TRUE))[1:10]
-g1 <- d |> mutate(g = ifelse(peak_name %in% top10, peak_name, "All other peaks")) |> rate(g) |>
-  mutate(g = reorder(g, success)) |> bar("Where: the 10 most climbed peaks", flip = TRUE)
-g2 <- d |> mutate(g = factor(season, c("Spring", "Summer", "Autumn", "Winter"))) |> rate(g) |> bar("When: season")
-g3 <- d |> filter(!is.na(age)) |>
-  mutate(g = cut(age, c(0, 30, 40, 50, 60, 100), labels = c("< 30", "30-39", "40-49", "50-59", "60+"), right = FALSE)) |>
-  rate(g) |> bar("Who: age")
-g4 <- d |> mutate(g = cut(staff_ratio, c(-Inf, 0, .5, 1, 2, Inf), labels = c("0", "up to 0.5", "0.5-1", "1-2", "> 2"))) |>
-  rate(g) |> bar("Support: hired staff per climber")
-save_fig("fig02_drivers.png", (g1 | (g2 / g3 / g4)) + plot_layout(widths = c(1.1, 1)), 9, 5)
-
-# 3c. why oxygen use is leakage: among FAILED climbers on 8000 m peaks, oxygen use depends on how high they got
-ox <- d |> filter(success == "no", peak_height >= 8000, !is.na(highpoint_metres)) |>
-  mutate(g = cut(highpoint_metres, c(0, 6500, 7000, 7500, 8000, 9000),
-                 labels = c("< 6500", "6500-7000", "7000-7500", "7500-8000", "> 8000"))) |>
-  group_by(g) |> summarise(n = n(), oxygen = mean(oxygen_member))
-save_fig("fig03_oxygen_leakage.png",
-         ggplot(ox, aes(g, oxygen)) + geom_col(fill = orange, width = 0.7) +
-           geom_text(aes(label = pct(oxygen)), vjust = -0.5, size = 3.5) +
-           scale_y_continuous(labels = pct, limits = c(0, 0.8)) + theme(panel.grid.major.x = element_blank()) +
-           labs(title = "Climbers who failed on 8000 m peaks: share who used oxygen",
-                x = "highest point reached (m)", y = NULL), 6, 3.3)
+# Figures of this section: see figures.R (Figures 1, 3, 4).
 
 # 3d. climbers of one expedition share their fate -> the data are clustered
 cl <- d |> group_by(expedition_id) |> filter(n() > 1) |> summarise(share = mean(success == "yes"))
 cat("\nExpeditions with 2+ climbers:", nrow(cl), "| nobody summits:", round(100 * mean(cl$share == 0)),
     "% | everybody summits:", round(100 * mean(cl$share == 1)), "%\n")
-save_fig("fig04_clustering.png",
-         ggplot(cl, aes(share)) + geom_histogram(breaks = seq(-0.05, 1.05, 0.1), fill = blue, colour = "white") +
-           scale_x_continuous(labels = pct, breaks = seq(0, 1, 0.25)) +
-           labs(title = "Share of the team that summits, per expedition", x = NULL, y = "expeditions"), 5.5, 3.2)
 
 
 # =====================================================================================
@@ -270,31 +215,7 @@ write.csv(tune_en, "results/tuning_elastic_net.csv", row.names = FALSE)
 write.csv(tune_rf, "results/tuning_random_forest.csv", row.names = FALSE)
 write.csv(tune_gbm, "results/tuning_boosting.csv", row.names = FALSE)
 
-# --- 5.5 Tuning figures ------------------------------------------------------------------
-t1 <- bind_rows(lapply(seq_along(alphas), function(i)
-  data.frame(alpha = factor(alphas[i]), loglambda = log(cv_list[[i]]$lambda), dev = cv_list[[i]]$cvm))) |>
-  ggplot(aes(loglambda, dev, colour = alpha)) + geom_line(linewidth = 0.7) +
-  geom_vline(xintercept = log(cv_en$lambda.1se), linetype = 2) +
-  scale_colour_manual(values = colorRampPalette(c("#a9c9f0", "#0f3d7a"))(5)) +
-  coord_cartesian(ylim = c(min(tune_en$cv_deviance), min(tune_en$cv_deviance) + 0.1)) +
-  labs(title = "Elastic net: CV deviance", x = "log(lambda)", y = NULL, colour = "alpha")
-t2 <- ggplot(cpt, aes(nsplit + 1, xerror)) +
-  geom_errorbar(aes(ymin = xerror - xstd, ymax = xerror + xstd), width = 0, colour = grey) +
-  geom_line(colour = blue) + geom_point(colour = blue, size = 0.9) +
-  geom_vline(xintercept = n_leaves, linetype = 2) + scale_x_log10() +
-  labs(title = "Tree: CV error by size", x = "leaves (log scale)", y = NULL)
-t3 <- tune_rf |> pivot_longer(c(cv_logloss, oob_logloss), names_to = "type", values_to = "ll") |>
-  mutate(type = ifelse(type == "cv_logloss", "CV by expedition", "out-of-bag")) |>
-  ggplot(aes(factor(node_size), ll, colour = factor(mtry), linetype = type, group = interaction(mtry, type))) +
-  geom_line(linewidth = 0.7) + geom_point(size = 1.3) +
-  scale_colour_manual(values = colorRampPalette(c("#a9c9f0", "#0f3d7a"))(4)) +
-  labs(title = "Random forest: CV vs out-of-bag log loss", x = "minimum node size", y = NULL, colour = "mtry", linetype = NULL)
-t4 <- ggplot(tune_gbm, aes(trees, cv_logloss, colour = factor(depth), linetype = factor(shrinkage))) +
-  geom_line(linewidth = 0.7) + scale_colour_manual(values = c(blue, orange, aqua)) +
-  coord_cartesian(ylim = c(best_gbm$cv_logloss, best_gbm$cv_logloss + 0.03)) +
-  labs(title = "Boosting: CV log loss", x = "number of trees", y = NULL, colour = "depth", linetype = "shrinkage")
-save_fig("fig05_tuning_simple.png", t1 + t2, 9, 3.4)
-save_fig("fig06_tuning_flexible.png", t3 + t4, 9, 3.4)
+# Tuning figures: see figures.R (Figures 5, 6).
 
 
 # =====================================================================================
@@ -321,44 +242,35 @@ for (m in setdiff(names(pred), "boosting"))
   cat(sprintf("  vs %-14s %.4f  [%.4f, %.4f]\n", m, test_metrics[m, 1] - test_metrics["boosting", 1],
               ci(boot[1, m, ] - boot[1, "boosting", ])[1], ci(boot[1, m, ] - boot[1, "boosting", ])[2]))
 
-# 6a. model comparison with intervals
-cmp <- boot_ci |> mutate(model = factor(model_names[model], rev(model_names)), final = model == "Boosting")
-r1 <- ggplot(cmp, aes(log_loss, model, colour = final)) + geom_pointrange(aes(xmin = ll_lo, xmax = ll_hi), size = 0.5) +
-  geom_text(aes(label = sprintf("%.3f", log_loss)), vjust = -1, size = 3.2, colour = "grey20") +
-  labs(title = "Log loss (lower is better)", x = NULL, y = NULL)
-r2 <- ggplot(filter(cmp, model != "Summit rate only"), aes(auc, model, colour = final)) +
-  geom_pointrange(aes(xmin = auc_lo, xmax = auc_hi), size = 0.5) +
-  geom_text(aes(label = sprintf("%.3f", auc)), vjust = -1, size = 3.2, colour = "grey20") +
-  labs(title = "AUC (higher is better)", x = NULL, y = NULL)
-save_fig("fig07_comparison.png", (r1 / r2 + plot_layout(heights = c(5, 4))) &
-           scale_colour_manual(values = c(grey, blue), guide = "none") & theme(panel.grid.major.y = element_blank()), 4.6, 4.6)
-
-# 6b. calibration: predicted probability vs observed summit rate in test deciles
-cal <- bind_rows(lapply(names(pred)[-1], function(m) data.frame(model = model_names[[m]], p = pred[[m]], y = y_te))) |>
-  mutate(model = factor(model, model_names[-1])) |> group_by(model) |> mutate(bin = ntile(p, 10)) |>
-  group_by(model, bin) |> summarise(predicted = mean(p), observed = mean(y), .groups = "drop")
-save_fig("fig08_calibration.png",
-         ggplot(cal, aes(predicted, observed)) + geom_abline(linetype = 2, colour = grey) +
-           geom_line(colour = blue) + geom_point(colour = blue, size = 1.5) + facet_wrap(~ model, nrow = 1) +
-           scale_x_continuous(labels = pct, limits = c(0, 0.85)) + scale_y_continuous(labels = pct, limits = c(0, 0.85)) +
-           labs(title = "Calibration on the test set (deciles of predicted probability)",
-                x = "predicted probability", y = "observed summit rate"), 9, 2.9)
 
 # 6c. the answer to the main question: how far do pre-climb facts move the odds?
 dec <- data.frame(p = pred$boosting, y = y_te) |> mutate(decile = ntile(p, 10)) |> group_by(decile) |>
   summarise(predicted = mean(p), observed = mean(y), n = n())
 cat("\nBoosting, test climbers sorted into tenths by predicted probability:\n"); print(as.data.frame(round(dec, 3)), row.names = FALSE)
-save_fig("fig09_deciles.png",
-         ggplot(dec, aes(factor(decile), observed)) + geom_col(fill = blue, width = 0.7) +
-           geom_hline(yintercept = mean(y_te), linetype = 2, colour = grey) +
-           geom_point(aes(y = predicted), shape = 21, fill = "white", colour = "grey15", size = 2.6, stroke = 0.9) +
-           geom_text(aes(y = pmax(observed, predicted), label = pct(observed)), vjust = -1.3, size = 3.3) +
-           annotate("text", x = 0.6, y = mean(y_te) + 0.035, hjust = 0, size = 3.2, colour = "grey35", label = "test average") +
-           scale_y_continuous(labels = pct, limits = c(0, 0.9)) + theme(panel.grid.major.x = element_blank()) +
-           labs(title = "Observed summit rate of test climbers, by tenth of predicted probability",
-                subtitle = "Bars: what happened.  Circles: what the boosting model predicted before the climb.",
-                x = "tenth of climbers, from lowest to highest predicted probability", y = NULL), 7.5, 3.8)
 write.csv(round(test_metrics, 4), "results/test_metrics.csv")
+
+
+# 6e. Confusion matrices at a cut-off c: sensitivity, specificity, precision (Unit 4)
+conf <- function(p, y, c) { yhat <- as.integer(p > c); tp <- sum(yhat & y); tn <- sum(!yhat & !y)
+  fp <- sum(yhat & !y); fn <- sum(!yhat & y)
+  c(cutoff = c, TP = tp, FN = fn, FP = fp, TN = tn, accuracy = (tp + tn) / length(y),
+    sensitivity = tp / (tp + fn), specificity = tn / (tn + fp), precision = tp / (tp + fp)) }
+conf_tab <- rbind(t(sapply(pred[-1], conf, y = y_te, c = 0.5)),
+                  boosting_cutoff_base_rate = conf(pred$boosting, y_te, mean(y_tr)))
+cat("\n=== Confusion matrices on the test set (cut-off 0.5; last row: boosting at the training summit rate) ===\n")
+print(round(conf_tab, 3))
+write.csv(round(conf_tab, 4), "results/confusion.csv")
+
+# 6f. Elastic net as an interpretable logit model (Units 2-3): coefficient path and odds ratios
+b_1se <- as.matrix(coef(cv_en, s = "lambda.1se"))[-1, 1]
+nice  <- function(x) x |> sub("^season", "season: ", x = _) |> sub("^peak", "peak: ", x = _) |>
+  sub("^citizenship", "citizenship: ", x = _) |> sub("^sexM", "male", x = _) |> sub("^rolele", "role: le", x = _) |>
+  sub("^log1p\\((.*)\\)$", "log(1 + \\1)", x = _) |> sub("staff_ratio", "staff per climber", x = _)
+or_tab <- data.frame(term = nice(names(b_1se)), beta = b_1se, odds_ratio = exp(b_1se)) |>
+  filter(!grepl("ns\\(", term), beta != 0) |> arrange(desc(abs(beta)))
+cat("\n=== Elastic net (alpha", best_alpha, ", lambda 1-SE): odds ratios of the non-spline terms ===\n")
+print(or_tab, row.names = FALSE, digits = 3)
+write.csv(or_tab, "results/odds_ratios.csv", row.names = FALSE)
 
 
 # =====================================================================================
@@ -381,47 +293,21 @@ imp_var   <- data.frame(variable = predictors, increase = unlist(mclapply(predic
 cat("\n=== Permutation importance of the boosting model (increase in test log loss) ===\n")
 print(imp_block[order(-imp_block$increase), ], row.names = FALSE, digits = 3)
 print(imp_var[order(-imp_var$increase), ], row.names = FALSE, digits = 3)
-save_fig("fig10_importance.png",
-         ggplot(imp_block, aes(increase, reorder(block, increase))) + geom_col(fill = blue, width = 0.65) +
-           geom_text(aes(label = sprintf("+%.3f", increase)), hjust = -0.15, size = 3.3) +
-           scale_x_continuous(expand = expansion(mult = c(0, 0.2))) + theme(panel.grid.major.y = element_blank()) +
-           labs(title = "What the model needs most", subtitle = "Increase in test log loss when a block is shuffled",
-                x = NULL, y = NULL), 5, 3.3)
 
-# 7b. Partial dependence: predicted summit probability when one variable changes
-pd <- function(v) { g <- plot(gb, i.var = v, n.trees = gb$n.trees, return.grid = TRUE, type = "response")
-                    data.frame(var = v, x = as.character(g[[1]]), p = g$y) }
-pd_num <- bind_rows(lapply(c("year", "age", "staff_ratio"), pd)) |> mutate(x = as.numeric(x)) |>
-  filter((var == "year" & x >= 1960) | (var == "age" & x >= 18 & x <= 70) | (var == "staff_ratio" & x <= 2)) |>
-  mutate(var = factor(var, c("year", "staff_ratio", "age"), c("Year", "Hired staff per climber", "Age")))
-p1 <- ggplot(pd_num, aes(x, p)) + geom_line(colour = blue, linewidth = 0.9) + facet_wrap(~ var, scales = "free_x") +
-  scale_y_continuous(labels = pct, limits = c(0.1, 0.55)) + labs(x = NULL, y = "predicted summit probability") +
-  theme(panel.spacing = unit(1.3, "lines"))
-pd_cat <- bind_rows(lapply(c("peak", "season"), pd)) |> mutate(var = factor(var, c("peak", "season"), c("Peak", "Season")))
-p2 <- ggplot(pd_cat, aes(p, reorder(x, p))) + geom_segment(aes(x = 0.1, xend = p, yend = reorder(x, p)), colour = grey, linewidth = 0.4) +
-  geom_point(colour = blue, size = 2.4) + facet_wrap(~ var, scales = "free_y") +
-  scale_x_continuous(labels = pct, limits = c(0.1, 0.55)) + theme(panel.grid.major.y = element_blank()) +
-  labs(x = "predicted summit probability", y = NULL)
-save_fig("fig11_partial_dependence.png", p1 / p2 + plot_layout(heights = c(1, 1.15)), 8, 5)
+# Relative influence as defined for gradient tree boosting (gbm), next to the permutation measure
+rel_inf <- summary(gb, plotit = FALSE, method = relative.influence)
+imp_gb  <- data.frame(variable = predictors,
+                      relative_influence = rel_inf$rel.inf[match(predictors, rel_inf$var)],
+                      permutation = imp_var$increase) |> mutate(across(-variable, ~ .x / max(.x)))
+cat("\n=== Boosting: relative influence vs test permutation importance (largest = 1) ===\n")
+print(imp_gb[order(-imp_gb$relative_influence), ], row.names = FALSE, digits = 2)
 
-# 7c. The first splits of the pruned tree as a readable rule book
-tree_top <- prune(tree, cp = tree$cptable[max(which(tree$cptable[, "nsplit"] <= 4)), "CP"])
-tree_top$frame$var <- sub("staff_ratio", "staff per climber", tree_top$frame$var)   # readable label
-png("figures/fig12_tree.png", width = 1800, height = 900, res = 200)
-rpart.plot(tree_top, type = 2, extra = 107, box.palette = "Blues", roundint = FALSE, tweak = 1.15)
-dev.off()
 
 # 7d. Gini vs permutation importance in the random forest (Gini favours variables with many split points)
 rf_gini <- fit_rf(train, best_rf$mtry, best_rf$node_size, importance = "impurity")
 imp_rf <- data.frame(variable = predictors, permutation = importance(rf)[predictors], gini = importance(rf_gini)[predictors]) |>
   mutate(across(-variable, ~ .x / max(.x)))
 cat("\n=== Random forest importance (scaled to max = 1) ===\n"); print(imp_rf[order(-imp_rf$permutation), ], row.names = FALSE, digits = 2)
-save_fig("fig13_importance_rf.png",
-         imp_rf |> pivot_longer(-variable) |>
-           ggplot(aes(value, factor(variable, imp_rf$variable[order(imp_rf$permutation)]), fill = name)) +
-           geom_col(position = "dodge", width = 0.75) + scale_fill_manual(values = c(gini = grey, permutation = blue)) +
-           theme(panel.grid.major.y = element_blank(), legend.position = "top") +
-           labs(title = "Random forest importance (largest = 1)", x = NULL, y = NULL, fill = NULL), 5.5, 4.6)
 
 # 7e. One climber, different plans: predictions for a 40-year-old US man in 2019
 height_of <- tapply(d$peak_height, d$peak_name, max)
@@ -446,11 +332,6 @@ plans <- bind_rows(
          citizenship = factor("USA", levels(train$citizenship)))
 plans$p <- predict_gb(gb, plans)
 cat("\n=== One climber, different plans ===\n"); print(transmute(plans, label, predicted = round(p, 2)), row.names = FALSE)
-save_fig("fig14_plans.png",
-         ggplot(plans, aes(p, factor(label, rev(label)))) + geom_col(fill = blue, width = 0.65) +
-           geom_text(aes(label = pct(p)), hjust = -0.2, size = 3.5) +
-           scale_x_continuous(labels = pct, limits = c(0, 1)) + theme(panel.grid.major.y = element_blank()) +
-           labs(title = "Predicted summit probability: a 40-year-old US man in 2019", x = NULL, y = NULL), 8, 3.3)
 
 
 # =====================================================================================
@@ -466,13 +347,6 @@ leak <- mclapply(leak_vars, function(v) {
 leak_metrics <- rbind(test_metrics["boosting", ], t(sapply(leak, metrics, y = y_te)))
 rownames(leak_metrics) <- c("Pre-climb variables only", "+ expedition used oxygen", "+ climber used oxygen")
 cat("\n=== Leakage check (boosting, test set) ===\n"); print(round(leak_metrics, 4))
-lk <- data.frame(model = factor(rownames(leak_metrics), rev(rownames(leak_metrics))), auc = leak_metrics[, "auc"])
-save_fig("fig15_leakage.png",
-         ggplot(lk, aes(auc, model, fill = model == "Pre-climb variables only")) + geom_col(width = 0.65) +
-           geom_text(aes(label = sprintf("%.3f", auc)), hjust = -0.15, size = 3.5) +
-           scale_fill_manual(values = c(orange, blue), guide = "none") + coord_cartesian(xlim = c(0.5, 0.9)) +
-           theme(panel.grid.major.y = element_blank()) +
-           labs(title = "Test AUC of boosting when oxygen variables are added", x = NULL, y = NULL), 5.5, 2.3)
 
 # 8b. Time split: train on 1950-2014, predict 2015-2019 with the tuned settings of each model.
 #     This is the situation of a climber planning a future expedition.
@@ -490,15 +364,14 @@ pred_fut <- list(
 time_metrics <- cbind(t(sapply(pred_fut, metrics, y = y_fut)), mean_predicted = sapply(pred_fut, mean))
 cat("\n=== Time split: trained on 1950-2014 (", nrow(past), "climbers), tested on 2015-2019 (", nrow(future),
     "climbers, observed summit rate", round(mean(y_fut), 3), ") ===\n"); print(round(time_metrics, 4))
-ts <- data.frame(year = future$year, Observed = y_fut, `Predicted (boosting)` = pred_fut$boosting, check.names = FALSE) |>
-  group_by(year) |> summarise(across(everything(), mean)) |> pivot_longer(-year)
-save_fig("fig16_time_split.png",
-         ggplot(ts, aes(year, value, colour = name)) + geom_line(linewidth = 0.9) + geom_point(size = 2) +
-           geom_text(data = filter(ts, year == 2019), aes(label = name), hjust = 0, nudge_x = 0.12, size = 3.4) +
-           scale_colour_manual(values = c(Observed = "grey15", `Predicted (boosting)` = blue), guide = "none") +
-           scale_y_continuous(labels = pct, limits = c(0, 0.75)) + scale_x_continuous(limits = c(2015, 2021), breaks = 2015:2019) +
-           labs(title = "Trained on 1950-2014, predicting 2015-2019", subtitle = "Average summit rate per year",
-                x = NULL, y = NULL), 5.5, 3.2)
+
+# Fitted objects for re-drawing figures without refitting (large, not in git)
+saveRDS(list(d = d, train = train, test = test, y_tr = y_tr, y_te = y_te, foldid = foldid, predictors = predictors,
+             alphas = alphas, cv_list = cv_list, cv_en = cv_en, best_alpha = best_alpha, tree = tree, cpt = cpt, n_leaves = n_leaves,
+             rf = rf, tune_rf = tune_rf, best_rf = best_rf, gb = gb, tune_gbm = tune_gbm, best_gbm = best_gbm,
+             pred = pred, boot_ci = boot_ci, imp_block = imp_block, imp_var = imp_var, imp_rf = imp_rf, imp_gb = imp_gb,
+             plans = plans, leak_metrics = leak_metrics, pred_fut = pred_fut, y_fut = y_fut, future = future),
+        "results/models.rds")
 
 sink()
-cat("Done: figures/ and results/ written.\n")
+source("figures.R")       # draw all figures from results/models.rds

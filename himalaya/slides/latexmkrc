@@ -1,0 +1,2 @@
+# build with pdfLaTeX (Latin Modern font)
+$pdf_mode = 1;

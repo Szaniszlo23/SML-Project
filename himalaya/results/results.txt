@@ -92,6 +92,51 @@ Boosting, test climbers sorted into tenths by predicted probability:
       9     0.569    0.576 1113
      10     0.716    0.731 1113
 
+=== Confusion matrices on the test set (cut-off 0.5; last row: boosting at the training summit rate) ===
+                          cutoff   TP   FN   FP   TN accuracy sensitivity
+elastic_net                0.500  546 3035  336 7216    0.697       0.152
+tree                       0.500 1223 2358  803 6749    0.716       0.342
+random_forest              0.500 1359 2222  713 6839    0.736       0.380
+boosting                   0.500 1531 2050  863 6689    0.738       0.428
+boosting_cutoff_base_rate  0.342 2457 1124 2347 5205    0.688       0.686
+                          specificity precision
+elastic_net                     0.956     0.619
+tree                            0.894     0.604
+random_forest                   0.906     0.656
+boosting                        0.886     0.640
+boosting_cutoff_base_rate       0.689     0.511
+
+=== Elastic net (alpha 0.25 , lambda 1-SE): odds ratios of the non-spline terms ===
+                       term      beta odds_ratio
+                       solo  8.88e-01      2.429
+ log(1 + staff per climber)  5.83e-01      1.791
+         citizenship: China  5.58e-01      1.747
+       citizenship: S Korea -4.16e-01      0.660
+        citizenship: Russia  4.09e-01      1.505
+              peak: Cho Oyu  4.04e-01      1.498
+          peak: Annapurna I -3.61e-01      0.697
+               peak: Makalu -3.46e-01      0.707
+             peak: Baruntse -3.14e-01      0.730
+         citizenship: India  3.07e-01      1.359
+              peak: Everest -2.62e-01      0.770
+                peak: Other -2.54e-01      0.776
+         citizenship: Spain -1.79e-01      0.836
+             season: Winter -1.58e-01      0.854
+               role: leader  1.45e-01      1.156
+         peak: Dhaulagiri I -1.33e-01      0.876
+         citizenship: Italy -1.07e-01      0.898
+               peak: Pumori -1.06e-01      0.900
+         citizenship: Japan  9.27e-02      1.097
+         citizenship: Other  5.66e-02      1.058
+   citizenship: Switzerland  5.45e-02      1.056
+            citizenship: UK -5.32e-02      0.948
+           eight_thousander -4.58e-02      0.955
+               peak: Lhotse -3.48e-02      0.966
+                 commercial  2.74e-02      1.028
+                age_missing -2.73e-02      0.973
+       citizenship: Austria -2.68e-03      0.997
+             season: Spring  8.45e-05      1.000
+
 === Permutation importance of the boosting model (increase in test log loss) ===
                             block increase
        Where: peak and its height   0.1127
@@ -117,8 +162,25 @@ Boosting, test climbers sorted into tenths by predicted probability:
    climbed_before 0.000290
       age_missing 0.000181
  eight_thousander 0.000137
-null device 
-          1 
+
+=== Boosting: relative influence vs test permutation importance (largest = 1) ===
+         variable relative_influence permutation
+             year              1.000      1.0000
+      citizenship              0.840      0.3199
+             peak              0.701      0.7690
+      peak_height              0.632      0.6192
+      staff_ratio              0.487      0.4025
+        team_size              0.291      0.0853
+              age              0.283      0.3180
+      hired_staff              0.182      0.0301
+           season              0.153      0.3552
+             role              0.056      0.0861
+              sex              0.019      0.0224
+       commercial              0.016      0.0105
+             solo              0.016      0.0110
+   climbed_before              0.014      0.0045
+      age_missing              0.011      0.0028
+ eight_thousander              0.003      0.0021
 
 === Random forest importance (scaled to max = 1) ===
          variable permutation  gini
